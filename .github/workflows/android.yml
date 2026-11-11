@@ -13,15 +13,10 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    # If you uploaded the raw ZIP file to the repo, this step ensures it unzips correctly
     - name: Unzip project if zipped
       run: |
         if [ -f *.zip ]; then
           unzip *.zip
-          # Move files up to root if nested inside a single folder inside the zip
-          if [ -d Notification* ]; then
-            mv Notification*/* . 2>/dev/null || true
-          fi
         fi
 
     - name: Set up JDK 17
@@ -31,14 +26,27 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Grant Execute Permission to Gradle
-      run: chmod +x gradlew
-
-    - name: Compile and Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Find and Run Gradle Build
+      run: |
+        # Find where gradlew is located in the directory tree
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        
+        if [ -z "$GRADLEW_PATH" ]; then
+          echo "Error: gradlew file could not be found anywhere in the repository!"
+          exit 1
+        fi
+        
+        echo "Found gradlew at: $GRADLEW_PATH"
+        
+        # Change directory to where gradlew lives
+        cd $(dirname "$GRADLEW_PATH")
+        
+        # Grant permissions and compile the app
+        chmod +x gradlew
+        ./gradlew assembleDebug
 
     - name: Upload Finished APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: NotificationButler-Debug-APK
-        path: "**/build/outputs/apk/debug/*.apk" # This wildcard dynamically finds the APK wherever it is
+        path: "**/build/outputs/apk/debug/*.apk"
