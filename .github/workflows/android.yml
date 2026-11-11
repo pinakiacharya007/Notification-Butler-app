@@ -24,26 +24,28 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Find and Run Gradle Build
+    # This installs the exact Gradle version your project requires
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: 8.9
+
+    - name: Find Project and Build APK
       run: |
-        # Find where gradlew is located in the directory tree
-        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        # Find where settings.gradle.kts lives in the extracted files
+        SETTINGS_PATH=$(find . -name "settings.gradle.kts" | head -n 1)
         
-        if [ -z "$GRADLEW_PATH" ]; then
-          echo "Error: gradlew file could not be found anywhere in the repository!"
+        if [ -z "$SETTINGS_PATH" ]; then
+          echo "Error: Could not find settings.gradle.kts anywhere!"
           exit 1
         fi
         
-        echo "Found gradlew at: $GRADLEW_PATH"
+        # Change directory to where the project configuration is located
+        cd $(dirname "$SETTINGS_PATH")
         
-        # Change directory to where gradlew lives
-        cd $(dirname "$GRADLEW_PATH")
-        
-        # Grant permissions and compile the app
-        chmod +x gradlew
-        ./gradlew assembleDebug
+        # Compile using the globally installed Gradle version instead of gradlew
+        gradle assembleDebug
 
     - name: Upload Finished APK Artifact
       uses: actions/upload-artifact@v4
